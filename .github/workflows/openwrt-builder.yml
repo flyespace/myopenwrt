@@ -34,7 +34,6 @@ jobs:
 
     steps:
     - name: Space cleanup and Initialization environment
-     
       
       run: |
         docker rmi `docker images -q`
