@@ -37,7 +37,6 @@ jobs:
         sudo -E apt-get -qq clean
         sudo rm -rf /var/lib/apt/lists/*
         rm -rf /tmp/*
-
         sudo timedatectl set-timezone "$TZ"
         sudo mkdir -p /workdir
         sudo chown $USER:$GROUPS /workdir
