@@ -23,62 +23,46 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-    - name: Before freeing up disk space
-      run: |
-        echo "Before freeing up disk space"
-        echo "=============================================================================="
-        df -hT
-        echo "=============================================================================="
-
-    - name: "Optimize Disk Space"
-      uses: "hugoalh/disk-space-optimizer-ghaction@v0.8.1"
-      with:
-        operate_sudo: "True"
-        general_include: ".+"
-        general_exclude: |-
-          ^GCC$
-          ^G\+\+$
-          Clang
-          LLVM
-        docker_include: ".+"
-        docker_prune: "True"
-        docker_clean: "True"
-        apt_prune: "True"
-        apt_clean: "True"
-        homebrew_prune: "True"
-        homebrew_clean: "True"
-        npm_prune: "True"
-        npm_clean: "True"
-        os_swap: "True"
-
-    - name: Freeing up disk space
-      uses: easimon/maximize-build-space@master
-      with: 
-        # 保持 24GB 以防止安装依赖时空间不足
-        root-reserve-mb: 34576
-        swap-size-mb: 1
-        remove-dotnet: 'true'
-        remove-android: 'true'
-        remove-haskell: 'true'
-        remove-codeql: 'true'
-        remove-docker-images: 'true'
-
-    - name: Free up disk space complete
-      run: |
-        echo "Free up disk space complete"
-        echo "=============================================================================="
-        df -hT
-        echo "=============================================================================="
-
     - name: Checkout
       uses: actions/checkout@v4
+
+    # ==============================================================================
+    # 核心修复步骤：深度清理磁盘
+    # 直接删除 GitHub Runner 预装的 Android SDK, .NET, CodeQL 等巨型工具
+    # 这一步能释放 10-15GB 空间，彻底解决 /var/cache/apt 空间不足问题
+    # ==============================================================================
+    - name: Free Disk Space (Deep Clean)
+      run: |
+        echo "Before cleaning:"
+        df -hT
+        
+        echo "Removing large unused packages..."
+        # 删除 .NET (约 1-2GB)
+        sudo rm -rf /usr/share/dotnet
+        # 删除 Android SDK (约 6-9GB)
+        sudo rm -rf /usr/local/lib/android
+        # 删除 Haskell (GHC) (约 2-3GB)
+        sudo rm -rf /opt/ghc
+        # 删除 Swift
+        sudo rm -rf /usr/share/swift
+        # 删除 CodeQL
+        sudo rm -rf /usr/local/lib/codeql
+        
+        echo "Cleaning Docker..."
+        docker system prune -a -f
+        
+        echo "Cleaning Apt cache..."
+        sudo apt-get clean
+        sudo rm -rf /var/lib/apt/lists/*
+        
+        echo "After cleaning:"
+        df -hT
 
     - name: Initialization environment
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
-        # 优化网络更新步骤，防止卡死
-        sudo rm -rf /var/lib/apt/lists/*
+        # 优化网络更新步骤
         sudo -E apt-get -qq clean
         sudo -E apt-get -qq update
         # 安装依赖包
@@ -89,6 +73,7 @@ jobs:
         mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python3 python3-pyelftools \
         libpython3-dev qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip \
         vim wget xmlto xxd zlib1g-dev python3-setuptools
+        # 清理多余包
         sudo -E apt-get -qq autoremove --purge
         sudo -E apt-get -qq clean
         sudo timedatectl set-timezone "$TZ"
