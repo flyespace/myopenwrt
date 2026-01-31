@@ -54,8 +54,9 @@ jobs:
     - name: Freeing up disk space
       uses: easimon/maximize-build-space@master
       with: 
-        # 核心修复：将 2048 改为 8192 (8GB)，防止安装依赖时系统盘爆满报错
-        root-reserve-mb: 8192
+        # ⚠️ 核心修复：将保留空间增加到 24GB (24576MB)
+        # 这确保系统盘有足够空间安装 apt-get 的依赖包，不会报 No space left
+        root-reserve-mb: 24576
         swap-size-mb: 1
         remove-dotnet: 'true'
         remove-android: 'true'
@@ -152,7 +153,6 @@ jobs:
       id: organize
       if: env.UPLOAD_FIRMWARE == 'true' && !cancelled() && steps.compile.outputs.status == 'success'
       run: |
-        # 增加容错，如果目录不存在则输出警告而不是直接报错
         if [ -d "openwrt/bin/targets" ]; then
           cd openwrt/bin/targets/*/*
           rm -rf packages
