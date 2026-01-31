@@ -54,9 +54,8 @@ jobs:
     - name: Freeing up disk space
       uses: easimon/maximize-build-space@master
       with: 
-        # ⚠️ 关键修改：将系统保留空间大幅提升至 24GB (24576MB)
-        # 彻底解决 apt-get install 时的 No space left on device 错误
-        root-reserve-mb: 34576
+        # 保持 24GB 以防止安装依赖时空间不足
+        root-reserve-mb: 24576
         swap-size-mb: 1
         remove-dotnet: 'true'
         remove-android: 'true'
@@ -78,6 +77,9 @@ jobs:
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
+        # 优化网络更新步骤，防止卡死
+        sudo rm -rf /var/lib/apt/lists/*
+        sudo -E apt-get -qq clean
         sudo -E apt-get -qq update
         # 安装依赖包
         sudo -E apt-get -qq install ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential \
@@ -151,7 +153,6 @@ jobs:
 
     - name: Organize files
       id: organize
-      # 增加编译状态检查，防止编译失败导致目录不存在的错误
       if: env.UPLOAD_FIRMWARE == 'true' && !cancelled() && steps.compile.outputs.status == 'success'
       run: |
         if [ -d "openwrt/bin/targets" ]; then
